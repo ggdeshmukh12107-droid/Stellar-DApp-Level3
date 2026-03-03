@@ -1,7 +1,5 @@
 import { useState, useCallback } from 'react';
 import {
-    isConnected,
-    isAllowed,
     requestAccess,
     getAddress,
     getNetwork,
@@ -26,47 +24,32 @@ export function useWallet() {
         setWalletState(prev => ({ ...prev, isLoading: true, error: null }));
 
         try {
-            // 1. Check extension is present
-            const connResult = await isConnected();
-            if (!connResult.isConnected) {
-                throw new Error(
-                    'Freighter extension not detected. Make sure it is installed and enabled, then refresh the page.'
-                );
-            }
-
-            // 2. Request site permission (opens Freighter popup) OR get address silently
+            // Directly call requestAccess — this opens the Freighter popup
+            // and works even when isConnected() gives a false negative on localhost.
+            // If the extension is not installed at all, it will throw/return an error.
             let address = '';
 
-            const allowedResult = await isAllowed();
-            if (!allowedResult.isAllowed) {
-                // Not yet approved — open the Freighter popup
-                const accessResult = await requestAccess();
-                if (accessResult.error) {
-                    throw new Error(
-                        'Connection rejected in Freighter. Please approve this site and try again.'
-                    );
-                }
-                address = accessResult.address;
+            // First try silent getAddress (works if site already approved)
+            const silent = await getAddress();
+            if (silent.address && !silent.error) {
+                address = silent.address;
             } else {
-                // Already approved — silently get address
-                const addrResult = await getAddress();
-                if (addrResult.error) {
-                    // If silent fetch fails, fall back to requestAccess for re-approval
-                    const accessResult = await requestAccess();
-                    if (accessResult.error) {
-                        throw new Error('Could not get address from Freighter. Please try again.');
-                    }
-                    address = accessResult.address;
-                } else {
-                    address = addrResult.address;
+                // No address yet — open the Freighter approval popup
+                const access = await requestAccess();
+                if (access.error) {
+                    throw new Error(String(access.error));
                 }
+                address = access.address;
             }
 
             if (!address) {
-                throw new Error('No address returned from Freighter. Is your wallet unlocked?');
+                throw new Error(
+                    'Freighter returned an empty address. ' +
+                    'Please make sure your wallet is unlocked and try again.'
+                );
             }
 
-            // 3. Get network
+            // Get network details
             const netResult = await getNetwork();
             const networkPassphrase = netResult.networkPassphrase || '';
             const network = networkPassphrase === TESTNET_PASSPHRASE ? 'testnet' : 'mainnet';
@@ -81,11 +64,17 @@ export function useWallet() {
         } catch (err) {
             const raw = err instanceof Error ? err.message : String(err);
             let message = raw;
-            if (/reject|denied|cancel/i.test(raw)) {
-                message = 'Connection rejected. Open Freighter, approve this site, then try again.';
+
+            if (/reject|denied|cancel|User declined/i.test(raw)) {
+                message = 'Connection rejected. Please approve the connection in Freighter and try again.';
             } else if (/locked|unlock/i.test(raw)) {
                 message = 'Freighter is locked. Please open and unlock your wallet first.';
+            } else if (/not installed|not found|not detected/i.test(raw)) {
+                message = 'Freighter extension not found. Please install it and refresh the page.';
+            } else if (/failed to fetch|network|timeout/i.test(raw)) {
+                message = 'Could not communicate with Freighter. Please refresh the page and try again.';
             }
+
             setWalletState(prev => ({
                 ...prev,
                 isConnected: false,
