@@ -119,22 +119,22 @@ https://stellar.expert/explorer/testnet/contract/CDEPLOY_YOUR_CONTRACT_ADDRESS_O
 ## 📸 Screenshots
 
 ### Wallet Connection & Hero
-<img width="1024" alt="Hero screen with Connect Wallet button" src="public/screenshots/01-hero.png" />
+<img width="1497" height="797" alt="Screenshot 2026-03-08 191542" src="https://github.com/user-attachments/assets/f90b6185-dcbc-4c98-9f7d-e779d5d0c5b8" />
 
 ### Connected — Testnet Badge
-<img width="1024" alt="Header showing TESTNET badge and wallet address after connecting Freighter" src="public/screenshots/02-connected.png" />
+<img width="1525" height="885" alt="Screenshot 2026-03-08 191608" src="https://github.com/user-attachments/assets/4db92909-c6fc-4dc5-862f-6c6802b8e080" />
 
 ### Campaign Grid & Progress Bars
-<img width="1024" alt="Active campaigns grid with real-time progress bars" src="public/screenshots/03-campaigns.png" />
+<img width="730" height="606" alt="Screenshot 2026-03-08 191902" src="https://github.com/user-attachments/assets/369e0c35-4a11-419b-98e9-e238115a86c5" />
 
 ### Donate Modal
-<img width="720" alt="Donate XLM modal with amount selection and custom input" src="public/screenshots/04-donate-modal.png" />
+<img width="643" height="413" alt="Screenshot 2026-03-08 191923 - Copy" src="https://github.com/user-attachments/assets/24046d4d-395e-4e12-933e-ed8772b80066" />
 
 ### Freighter Signing Popup
-<img width="720" alt="Freighter wallet popup asking to confirm the transaction with memo" src="public/screenshots/05-freighter-popup.png" />
+<img width="1294" height="1006" alt="Screenshot 2026-03-08 192113" src="https://github.com/user-attachments/assets/fb5b6974-a146-4151-bde4-d4e827a2a9bb" />
 
 ### Donation Success ✅
-<img width="720" alt="Thank you screen confirming 10.00 XLM donation to Community Hackathon was successful" src="public/screenshots/06-success.png" />
+<img width="775" height="673" alt="Screenshot 2026-03-08 192140" src="https://github.com/user-attachments/assets/4bd31693-011e-40b6-9871-8e79a7a9bfda" />
 
 
 
