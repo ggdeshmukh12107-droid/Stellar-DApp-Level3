@@ -149,21 +149,16 @@ export function useCampaigns() {
 
             // Try real Stellar testnet transaction if wallet is connected
             if (signTx && donor && donor !== 'Anonymous') {
-                try {
-                    // Auto-fund from Friendbot if account doesn't exist yet
-                    await ensureFunded(donor);
-                    const result = await buildAndSubmitDonationTx(
-                        donor,
-                        input.amount,
-                        campaignTitle,
-                        signTx
-                    );
-                    txHash = result.hash;
-                    isRealTx = true;
-                } catch (err) {
-                    // Real tx failed — fall back to simulated
-                    console.warn('Real Stellar tx failed, using simulated:', err);
-                }
+                // Auto-fund from Friendbot if account doesn't exist yet
+                await ensureFunded(donor);
+                const result = await buildAndSubmitDonationTx(
+                    donor,
+                    input.amount,
+                    campaignTitle,
+                    signTx
+                );
+                txHash = result.hash;
+                isRealTx = true;
             }
 
             const donation: Donation = {

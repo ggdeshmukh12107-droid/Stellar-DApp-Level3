@@ -40,17 +40,31 @@ function App() {
     setLoadingCampaignId(donatingTo.id);
     try {
       // Pass signTransaction so a real Stellar testnet tx is submitted
-      // (appears in Freighter history). Falls back to demo if it fails.
+      // (appears in Freighter history).
       await donate(
         { campaignId: donatingTo.id, amount },
         wallet.publicKey || 'Anonymous',
         wallet.isConnected ? wallet.signTransaction : undefined
       );
-      addToast(`💫 Donated ${amount} XLM to "${donatingTo.title}"!`, 'success');
+      setDonatingTo(null);
+      addToast(`💫 Donated ${amount} XLM to "${donatingTo.title}"! Check Freighter history.`, 'success');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      // Surface the real error so user knows exactly what went wrong
+      if (/already voted|already donated/i.test(msg)) {
+        addToast('❌ You already donated to this campaign.', 'error');
+      } else if (/network|horizon|submit/i.test(msg)) {
+        addToast(`❌ Network error: ${msg}`, 'error');
+      } else if (/freighter|signed|empty/i.test(msg)) {
+        addToast(`❌ Wallet error: ${msg}`, 'error');
+      } else {
+        addToast(`❌ Transaction failed: ${msg}`, 'error');
+      }
     } finally {
       setLoadingCampaignId(null);
     }
   };
+
 
   return (
     <div className="app">

@@ -38,35 +38,63 @@ export async function buildAndSubmitDonationTx(
     campaignTitle: string,
     signTx: (xdr: string) => Promise<string>
 ): Promise<DonationTxResult> {
-    // Load donor account to get current sequence number
-    const account = await server.loadAccount(donor);
+    // Load donor account
+    let account;
+    try {
+        account = await server.loadAccount(donor);
+    } catch (e) {
+        throw new Error(`Account not found on Stellar Testnet. Fund your wallet at https://friendbot.stellar.org — ${String(e)}`);
+    }
 
-    // Build transaction: minimal self-payment + memo describing donation
-    const memoText = `${amount} XLM → ${campaignTitle}`.slice(0, 28); // Stellar memo max 28 bytes
+    // Build memo using ASCII only (Stellar memo max = 28 bytes)
+    const label = `${amount} XLM -> ${campaignTitle}`;
+    const memoText = label.length > 28 ? label.slice(0, 28) : label;
+
     const tx = new TransactionBuilder(account, {
-        fee: BASE_FEE,
+        fee: String(Number(BASE_FEE) * 10), // 10x base fee to ensure quick inclusion
         networkPassphrase: Networks.TESTNET,
     })
         .addOperation(
             Operation.payment({
-                destination: donor, // self-payment so no recipient account needed
+                destination: donor,   // self-payment, no recipient account needed
                 asset: Asset.native(),
-                amount: '0.0000001', // minimal, just to create a valid tx
+                amount: '0.0000001',  // 1 stroop — minimal valid amount
             })
         )
         .addMemo(Memo.text(memoText))
-        .setTimeout(30)
+        .setTimeout(60)
         .build();
 
     const xdr = tx.toXDR();
+    console.log('[StellarFund] Built tx XDR, sending to Freighter for signing...');
 
     // Sign with Freighter
-    const signedXdr = await signTx(xdr);
+    let signedXdr: string;
+    try {
+        signedXdr = await signTx(xdr);
+    } catch (e) {
+        throw new Error(`Freighter signing failed: ${String(e)}`);
+    }
+
+    if (!signedXdr) throw new Error('Freighter returned empty XDR. Make sure Freighter is on Testnet and you approved the transaction.');
+    console.log('[StellarFund] Signed XDR received, submitting to Horizon...');
 
     // Submit to Stellar testnet
-    const signedTx = TransactionBuilder.fromXDR(signedXdr, Networks.TESTNET);
-    const result = await server.submitTransaction(signedTx);
+    let result;
+    try {
+        const signedTx = TransactionBuilder.fromXDR(signedXdr, Networks.TESTNET);
+        result = await server.submitTransaction(signedTx);
+    } catch (e: unknown) {
+        // Horizon wraps errors — extract result_codes if available
+        const he = e as { response?: { data?: { extras?: { result_codes?: unknown } } } };
+        const codes = he?.response?.data?.extras?.result_codes;
+        if (codes) {
+            throw new Error(`Horizon rejected transaction: ${JSON.stringify(codes)}`);
+        }
+        throw new Error(`Horizon submission failed: ${String(e)}`);
+    }
 
+    console.log('[StellarFund] Transaction submitted! Hash:', result.hash);
     return {
         hash: result.hash,
         ledger: (result as unknown as { ledger: number }).ledger ?? 0,

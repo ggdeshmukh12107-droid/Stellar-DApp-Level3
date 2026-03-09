@@ -54,6 +54,11 @@ export function useWallet() {
             const networkPassphrase = netResult.networkPassphrase || '';
             const network = networkPassphrase === TESTNET_PASSPHRASE ? 'testnet' : 'mainnet';
 
+            // ⛔ Block mainnet — this app is Testnet only
+            if (network !== 'testnet') {
+                throw new Error('WRONG_NETWORK');
+            }
+
             setWalletState({
                 isConnected: true,
                 publicKey: address,
@@ -67,6 +72,8 @@ export function useWallet() {
 
             if (/reject|denied|cancel|User declined/i.test(raw)) {
                 message = 'Connection rejected. Please approve the connection in Freighter and try again.';
+            } else if (/WRONG_NETWORK/.test(raw)) {
+                message = '⚠️ Freighter is set to Mainnet. Open Freighter → Settings → Network → switch to Testnet, then try again.';
             } else if (/locked|unlock/i.test(raw)) {
                 message = 'Freighter is locked. Please open and unlock your wallet first.';
             } else if (/not installed|not found|not detected/i.test(raw)) {
@@ -93,13 +100,23 @@ export function useWallet() {
     const signTransaction = useCallback(
         async (xdr: string): Promise<string> => {
             if (!walletState.isConnected) throw new Error('Wallet not connected');
+            // ⛔ Hard Testnet-only guard
+            if (walletState.network !== 'testnet') {
+                throw new Error('⚠️ Freighter is on Mainnet. Open Freighter → Settings → Network → switch to Testnet before donating.');
+            }
             const result = await freighterSignTransaction(xdr, {
                 networkPassphrase: TESTNET_PASSPHRASE,
             });
             if (result.error) throw new Error(String(result.error));
-            return (result as unknown as { signedTxXdr: string }).signedTxXdr || '';
+            // Freighter v6 returns { signedTxXdr: string } — extract it safely
+            const signed =
+                (result as unknown as { signedTxXdr?: string }).signedTxXdr ??
+                (result as unknown as { result?: string }).result ??
+                '';
+            if (!signed) throw new Error('Freighter returned an empty signed transaction. Make sure Freighter is set to Testnet and has enough XLM.');
+            return signed;
         },
-        [walletState.isConnected]
+        [walletState.isConnected, walletState.network]
     );
 
     return {
